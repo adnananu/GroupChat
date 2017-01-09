@@ -22,7 +22,6 @@ app.use(function(req, res, next) {
 });
 
 
-//UMER
 app.engine('html', require('ejs').renderFile);
 app.set('view engine', 'html');
 
