@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+	<title>LeadIn Chat</title>
+	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	<script   src="https://code.jquery.com/jquery-3.1.1.min.js"   integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="   crossorigin="anonymous"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/web-socket-js/1.0.0/web_socket.js"></script>
+	
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/json2/20160511/json_parse.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery.nicescroll/3.5.1/jquery.nicescroll.min.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="style.css">
+
+	
+</head>
+
+<body background="back.jpg">
+
+	<div class="container" id="container">
+	<div class="headerDiv" id="headerDiv" >Chat Demo</div>
+		<div id="userFormArea" class="row" >
+			
+			<div class="col-md-12">
+				<div class="login" id="login"></div>
+				<div id ="welcome" class ="well">my casa</div>
+
+				<form id="userForm">
+					<div class="form-group">
+						<!-- <label>Enter Username</label> -->
+						<input class="form-control" autocomplete="off" placeholder="Enter Username"; id="username" autofocus/>
+						<!-- <br /> -->
+						<input id="nickButton" type="submit" class="btn btn-primary" value="Enter">
+					</div>
+				</form>
+
+			</div>
+
+		</div>
+	<div id="mainMessageContainer">
+
+		<div id="messageArea" class="row" >
+
+			<!--side pad-->
+			<div  class="col-md-4">
+				
+				<div id="userList" class="well" >
+
+					<menu class="list-group" id="users" ></menu>
+					
+				</div>
+
+			</div>
+			<!--side pad-->
+
+			<!--chat pad-->
+			<div class="col-md-8" id="chatMain">
+				
+				<div class="chat" id="chat" ></div>
+			
+
+			<!-- message input form -->
+			<div>
+				<form id="messageForm">
+					<div class="form-group">
+						
+						<input type="text" autocomplete="off" class="form-control" id="message" placeholder="Write Message.." style="width: 760px; float: left; margin-top: -10px; border-radius: 5px; background-color: #e6ffe6; ">
+
+						<input type="submit" class="btn btn-primary" value="Send" style="float:right;margin-top: -9px; height: 32px; width: 65px; border: 1px solid  #80bfff; background-color: #80bfff; color: #0066cc;">
+					</div>
+				</form>
+			</div>
+			<!-- message input form -->
+			
+		</div>
+		<!--chat pad-->
+
+	</div>
+		
+</div>
+
+	<script type="text/javascript">
+
+		$(document).ready(function() { 
+		    $('#users').niceScroll({cursorcolor:"#b3d9ff", cursorwidth: '8px', autohidemode: true, zindex: 999 });
+		    $('#chat').niceScroll({cursorcolor:"#b3d9ff", cursorwidth: '8px', autohidemode: true, zindex: 999 });
+		});
+
+	    $(function(){
+	    	
+	    	var webSocket = new WebSocket("ws://localhost:8888");
+	    	var $messageForm = $('#messageForm');
+	    	var $message = $('#message');
+	    	var $chat = $('#chat');
+	    	var $headerDiv = $('#headerDiv');
+	    	
+
+	    	var $userForm = $('#userForm');
+	    	var $login = $('#login');
+	    	var $users = $('#users');
+	    	var $username = $('#username');
+	    	var $userFormArea = $('#userFormArea');
+	    	var $messageArea = $('#messageArea');
+
+	    	/*sending message to all users through server*/
+	    	$messageForm.submit(function(e){
+
+	    		e.preventDefault();
+	    		console.log('Submitted');//to check if it is working
+	    		webSocket.send($message.val());
+	    		$message.val('');
+	    	});
+
+	    	/*handling response from server*/
+	    	webSocket.onmessage = function (e){
+
+	  			msg = JSON.parse(e.data);
+	  			/*getting list of user in the form of array*/
+	  			if(msg.array){
+	  				console.log("incoming data after parsing: "+msg.array);
+	  				var html = "";
+				    for (var i = 0; i < msg.array.length; i++) {
+				    	html +='<li class="list-group-item"><img width="50" height="50" src="http://cs625730.vk.me/v625730358/1126a/qEjM1AnybRA.jpg"><div class="info"><div class="user-name">'+msg.array[i]+'</div><div class="status on"> Online</div></div></li>';
+				    }
+				    $users.html(html);
+	  			}
+	  			else /*setting welcome messge or error for entring to chat*/
+	  			{
+		  			if(msg.welcome)
+		    			document.getElementById('welcome').innerHTML = msg.welcome;
+		    		else if(msg.error){
+		    			document.getElementById('welcome').innerHTML = msg.error;
+		    			document.getElementById('username').focus();
+		    		}
+		    		else	/*showing message in message div*/
+		    		{
+		    			$userFormArea.hide();
+		    			$headerDiv.show();
+		    			$messageArea.show();
+
+		    			var finalMessage;
+		    			if(msg.from === "_server")
+		    				finalMessage = msg.message;
+		    			else
+		    				finalMessage = msg.from+' : '+msg.message;
+
+		    			$chat.append('<div class ="textMessage">'+finalMessage+'</div>');
+		    		}
+	    	    }
+
+            };
+
+            /*function for getting username to login*/
+            $userForm.submit(function(e){
+
+	    		e.preventDefault();
+	    		if($username.val() === ""){
+	    			document.getElementById('welcome').innerHTML = "Must enter a user name!";
+	    			return;
+	    		}
+	    		var userNick = "/nick "+$username.val();
+	    		console.log(userNick);
+	    		webSocket.send(userNick);
+	    		$username.val('');
+	    	});
+
+	    });
+
+	</script>
+
+
+</body>
+</html>
